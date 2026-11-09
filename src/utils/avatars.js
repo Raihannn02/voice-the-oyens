@@ -47,3 +47,4 @@ export function saveProfile(profile) {
     console.error('Failed to save profile', err);
   }
 }
+

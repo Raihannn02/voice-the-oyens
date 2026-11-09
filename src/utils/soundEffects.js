@@ -178,3 +178,53 @@ export function playMessageSound() {
   osc.start(now);
   osc.stop(now + 0.18);
 }
+
+// Fun Oyen Soundboard Synthesizer
+export function playMeowSound() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = 'sawtooth';
+  // Meow pitch contour: rise then gradual slide down
+  osc.frequency.setValueAtTime(450, now);
+  osc.frequency.exponentialRampToValueAtTime(850, now + 0.12);
+  osc.frequency.exponentialRampToValueAtTime(320, now + 0.45);
+
+  gain.gain.setValueAtTime(0.01, now);
+  gain.gain.linearRampToValueAtTime(0.12, now + 0.08);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.45);
+}
+
+export function playPurrSound() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(80, now);
+  osc.frequency.linearRampToValueAtTime(95, now + 0.15);
+  osc.frequency.linearRampToValueAtTime(75, now + 0.3);
+
+  gain.gain.setValueAtTime(0.1, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.35);
+}
+

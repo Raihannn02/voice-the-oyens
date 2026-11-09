@@ -14,8 +14,10 @@ import {
   VolumeX,
   Sparkles,
   Users,
+  Menu,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { playMeowSound, playPurrSound } from '../utils/soundEffects';
 
 export default function VoiceStage({
   activeVoiceChannel,
@@ -480,3 +482,4 @@ function ParticipantMiniCard({
     </div>
   );
 }
+
