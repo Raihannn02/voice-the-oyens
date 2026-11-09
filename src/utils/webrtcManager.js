@@ -52,11 +52,13 @@ export class VoiceManager {
       const [sendChat, getChat] = this.room.makeAction('chat');
       const [sendReaction, getReaction] = this.room.makeAction('reaction');
       const [sendStreamType, getStreamType] = this.room.makeAction('streamType');
+      const [sendRoleGrant, getRoleGrant] = this.room.makeAction('roleGrant');
 
       this.sendPresence = sendPresence;
       this.sendChat = sendChat;
       this.sendReaction = sendReaction;
       this.sendStreamType = sendStreamType;
+      this.sendRoleGrant = sendRoleGrant;
 
       // Handle presence updates
       getPresence((data, peerId) => {
@@ -76,6 +78,13 @@ export class VoiceManager {
       getReaction((reaction, peerId) => {
         if (this.callbacks.onReaction) {
           this.callbacks.onReaction(reaction, peerId);
+        }
+      });
+
+      // Handle role yang diberikan Owner kepada kita
+      getRoleGrant((data) => {
+        if (this.callbacks.onRoleGranted) {
+          this.callbacks.onRoleGranted(data);
         }
       });
 
@@ -411,6 +420,7 @@ export class VoiceManager {
       sender: this.profile.name,
       avatar: this.profile.emoji,
       bg: this.profile.bg,
+      role: this.profile.role || null,
       channelId,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       image,
@@ -448,6 +458,13 @@ export class VoiceManager {
   updateProfile(newProfile) {
     this.profile = newProfile;
     this.broadcastPresence();
+  }
+
+  // Owner memberikan / mengubah role seorang kawan (dikirim ke peer tertentu).
+  grantRole(peerId, role) {
+    if (this.sendRoleGrant && peerId) {
+      this.sendRoleGrant({ role: role || null }, peerId);
+    }
   }
 
   cleanupPeer(peerId) {

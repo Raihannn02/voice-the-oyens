@@ -10,26 +10,17 @@ import {
   Radio,
   Share2,
   Check,
-  ChevronDown,
   Sparkles,
   Plus,
   X,
+  Pencil,
+  Trash,
+  Users,
+  Crown,
+  Info,
 } from 'lucide-react';
-
-export const DEFAULT_TEXT_CHANNELS = [
-  { id: 'ngobrol-santai', name: 'ngobrol-santai', topic: 'Tempat santai para oyen' },
-  { id: 'share-meme', name: 'share-meme', topic: 'Bagi-bagi meme & gambar lucu' },
-  { id: 'bot-perintah', name: 'bot-perintah', topic: 'Command dan info server' },
-];
-
-export const DEFAULT_VOICE_CHANNELS = [
-  { id: 'voice-utama', name: 'Voice Oyen Utama', desc: 'Ruang ngobrol utama' },
-  { id: 'ruang-mabar', name: 'Ruang Mabar Gaming', desc: 'Squad & party game' },
-  { id: 'stage-nonton', name: 'Stage Nonton Bareng', desc: 'Screen share & streaming' },
-];
-
-export const TEXT_CHANNELS = DEFAULT_TEXT_CHANNELS;
-export const VOICE_CHANNELS = DEFAULT_VOICE_CHANNELS;
+import RoleBadge from './RoleBadge';
+import { isDisplayableRole } from '../utils/roles';
 
 export default function Sidebar({
   profile,
@@ -47,40 +38,77 @@ export default function Sidebar({
   isSpeaking,
   isMobileOpen,
   closeMobileSidebar,
+  textChannels,
+  voiceChannels,
+  canManageChannels,
+  onCreateChannel,
+  onUpdateChannel,
+  onDeleteChannel,
+  onOpenMembers,
+  memberCount,
+  selfRole,
 }) {
   const [copied, setCopied] = useState(false);
-  const [textChannels, setTextChannels] = useState(DEFAULT_TEXT_CHANNELS);
-  const [voiceChannels, setVoiceChannels] = useState(DEFAULT_VOICE_CHANNELS);
-  const [showAddChannelModal, setShowAddChannelModal] = useState(false);
-  const [newChannelType, setNewChannelType] = useState('voice'); // 'voice' or 'text'
-  const [newChannelName, setNewChannelName] = useState('');
+  const [channelModal, setChannelModal] = useState(null); // { mode, type, id?, name, description }
+  const [deleteTarget, setDeleteTarget] = useState(null); // { type, id, name }
+
+  const isOwnerProfile = selfRole?.id === 'owner';
 
   const copyInvite = () => {
-    const url = window.location.origin + window.location.pathname + `?room=${activeVoiceChannel || 'voice-utama'}`;
+    const url =
+      window.location.origin + window.location.pathname + `?room=${activeVoiceChannel || 'voice-utama'}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const handleCreateChannel = (e) => {
+  const openCreateChannel = (type) => {
+    setChannelModal({ mode: 'create', type, name: '', description: '' });
+  };
+
+  const openEditChannel = (type, ch) => {
+    setChannelModal({
+      mode: 'edit',
+      type,
+      id: ch.id,
+      name: ch.name,
+      description: (type === 'voice' ? ch.desc : ch.topic) || '',
+    });
+  };
+
+  const submitChannel = (e) => {
     e.preventDefault();
-    if (!newChannelName.trim()) return;
+    if (!channelModal) return;
+    const name = channelModal.name.trim();
+    if (!name) return;
 
-    const id = newChannelName.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 24) || 'channel-' + Date.now();
-    const name = newChannelName.trim();
-
-    if (newChannelType === 'voice') {
-      const updated = [...voiceChannels, { id, name, desc: 'Custom Voice Room' }];
-      setVoiceChannels(updated);
-      joinVoiceChannel(id);
+    if (channelModal.mode === 'create') {
+      const created = onCreateChannel({
+        type: channelModal.type,
+        name,
+        description: channelModal.description.trim(),
+      });
+      if (created) {
+        if (channelModal.type === 'voice') joinVoiceChannel(created.id);
+        else setActiveTextChannel(created.id);
+      }
     } else {
-      const updated = [...textChannels, { id, name, topic: 'Custom Text Channel' }];
-      setTextChannels(updated);
-      setActiveTextChannel(id);
+      onUpdateChannel(
+        channelModal.type,
+        channelModal.id,
+        channelModal.type === 'voice'
+          ? { name, desc: channelModal.description.trim() }
+          : { name, topic: channelModal.description.trim() }
+      );
     }
+    setChannelModal(null);
+  };
 
-    setNewChannelName('');
-    setShowAddChannelModal(false);
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      onDeleteChannel(deleteTarget.type, deleteTarget.id);
+      setDeleteTarget(null);
+    }
   };
 
   const connectedPeersList = Array.from(peers.entries());
@@ -101,25 +129,40 @@ export default function Sidebar({
         }`}
       >
         {/* Server Header */}
-        <div className="h-14 px-4 border-b border-[#1f2023] flex items-center justify-between shadow-xs bg-[#2b2d31] hover:bg-[#35373c] transition-colors cursor-pointer group">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-lg shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform">
+        <div className="h-14 px-3 border-b border-[#1f2023] flex items-center justify-between shadow-xs bg-[#2b2d31]">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-lg shadow-md shadow-orange-500/20 shrink-0">
               🐱
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="font-bold text-sm text-white tracking-wide flex items-center gap-1.5">
                 The Oyens
-                <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+                <Sparkles className="w-3.5 h-3.5 text-orange-400 shrink-0" />
               </h1>
-              <p className="text-[11px] text-[#949ba4]">Voice & ShareScreen</p>
+              <p className="text-[11px] text-[#949ba4] truncate flex items-center gap-1">
+                {isOwnerProfile ? (
+                  <>
+                    <Crown className="w-3 h-3 text-amber-400" /> Owner Panel
+                  </>
+                ) : (
+                  'Voice & ShareScreen'
+                )}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 shrink-0">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                copyInvite();
-              }}
+              onClick={onOpenMembers}
+              title="Anggota & Role"
+              className="relative p-1.5 rounded-md hover:bg-[#404249] text-[#b5bac1] hover:text-white transition-colors"
+            >
+              <Users className="w-4 h-4" />
+              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-orange-500 text-white text-[9px] font-bold flex items-center justify-center">
+                {memberCount}
+              </span>
+            </button>
+            <button
+              onClick={copyInvite}
               title="Salin Link Invite Room"
               className="p-1.5 rounded-md hover:bg-[#404249] text-[#b5bac1] hover:text-white transition-colors"
             >
@@ -140,36 +183,62 @@ export default function Sidebar({
           <div>
             <div className="flex items-center justify-between px-2 text-[11px] font-bold text-[#949ba4] tracking-wider uppercase mb-1">
               <span>Text Channels</span>
-              <button
-                onClick={() => {
-                  setNewChannelType('text');
-                  setShowAddChannelModal(true);
-                }}
-                title="Tambah Text Channel"
-                className="hover:text-white"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
+              {canManageChannels && (
+                <button
+                  onClick={() => openCreateChannel('text')}
+                  title="Tambah Text Channel"
+                  className="hover:text-white transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <div className="space-y-0.5">
               {textChannels.map((ch) => {
                 const isActive = activeTextChannel === ch.id;
                 return (
-                  <button
-                    key={ch.id}
-                    onClick={() => {
-                      setActiveTextChannel(ch.id);
-                      closeMobileSidebar?.();
-                    }}
-                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-[#404249] text-white'
-                        : 'text-[#949ba4] hover:bg-[#35373c] hover:text-[#dbdee1]'
-                    }`}
-                  >
-                    <Hash className="w-4 h-4 text-[#80848e] shrink-0" />
-                    <span className="truncate">{ch.name}</span>
-                  </button>
+                  <div key={ch.id} className="relative group/ch">
+                    <button
+                      onClick={() => {
+                        setActiveTextChannel(ch.id);
+                        closeMobileSidebar?.();
+                      }}
+                      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        canManageChannels ? 'pr-14' : ''
+                      } ${
+                        isActive
+                          ? 'bg-[#404249] text-white'
+                          : 'text-[#949ba4] hover:bg-[#35373c] hover:text-[#dbdee1]'
+                      }`}
+                    >
+                      <Hash className="w-4 h-4 text-[#80848e] shrink-0" />
+                      <span className="truncate">{ch.name}</span>
+                    </button>
+                    {canManageChannels && (
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover/ch:flex items-center gap-0.5 rounded-md bg-[#2b2d31]/95 pl-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditChannel('text', ch);
+                          }}
+                          title="Edit channel"
+                          className="p-1 rounded hover:bg-[#404249] text-[#b5bac1] hover:text-white transition-colors"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget({ type: 'text', id: ch.id, name: ch.name });
+                          }}
+                          title="Hapus channel"
+                          className="p-1 rounded hover:bg-red-500/20 text-[#b5bac1] hover:text-red-400 transition-colors"
+                        >
+                          <Trash className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -178,51 +247,82 @@ export default function Sidebar({
           {/* Voice Channels Category */}
           <div>
             <div className="flex items-center justify-between px-2 text-[11px] font-bold text-[#949ba4] tracking-wider uppercase mb-1">
-              <span>Voice & Screen Channels</span>
-              <button
-                onClick={() => {
-                  setNewChannelType('voice');
-                  setShowAddChannelModal(true);
-                }}
-                title="Tambah Voice Channel"
-                className="hover:text-white"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
+              <span>Voice & Screen</span>
+              {canManageChannels && (
+                <button
+                  onClick={() => openCreateChannel('voice')}
+                  title="Tambah Voice Channel"
+                  className="hover:text-white transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <div className="space-y-1">
               {voiceChannels.map((vc) => {
                 const isConnected = activeVoiceChannel === vc.id;
                 return (
                   <div key={vc.id} className="space-y-0.5">
-                    <button
-                      onClick={() => {
-                        if (!isConnected) {
-                          joinVoiceChannel(vc.id);
-                        }
-                        closeMobileSidebar?.();
-                      }}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                        isConnected
-                          ? 'bg-orange-500/15 text-orange-400'
-                          : 'text-[#949ba4] hover:bg-[#35373c] hover:text-[#dbdee1]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <Volume2 className={`w-4 h-4 shrink-0 ${isConnected ? 'text-orange-400' : 'text-[#80848e]'}`} />
-                        <span className="truncate">{vc.name}</span>
-                      </div>
-                      {isConnected && (
-                        <span className="flex h-2 w-2 relative">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                        </span>
+                    <div className="relative group/vc">
+                      <button
+                        onClick={() => {
+                          if (!isConnected) {
+                            joinVoiceChannel(vc.id);
+                          }
+                          closeMobileSidebar?.();
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          canManageChannels ? 'pr-14' : ''
+                        } ${
+                          isConnected
+                            ? 'bg-orange-500/15 text-orange-400'
+                            : 'text-[#949ba4] hover:bg-[#35373c] hover:text-[#dbdee1]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Volume2
+                            className={`w-4 h-4 shrink-0 ${
+                              isConnected ? 'text-orange-400' : 'text-[#80848e]'
+                            }`}
+                          />
+                          <span className="truncate">{vc.name}</span>
+                        </div>
+                        {isConnected && (
+                          <span className="flex h-2 w-2 relative shrink-0 mr-1">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                          </span>
+                        )}
+                      </button>
+                      {canManageChannels && (
+                        <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover/vc:flex items-center gap-0.5 rounded-md bg-[#2b2d31]/95 pl-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditChannel('voice', vc);
+                            }}
+                            title="Edit channel"
+                            className="p-1 rounded hover:bg-[#404249] text-[#b5bac1] hover:text-white transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget({ type: 'voice', id: vc.id, name: vc.name });
+                            }}
+                            title="Hapus channel"
+                            className="p-1 rounded hover:bg-red-500/20 text-[#b5bac1] hover:text-red-400 transition-colors"
+                          >
+                            <Trash className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       )}
-                    </button>
+                    </div>
 
                     {/* Connected Users in this Voice Channel */}
                     {isConnected && (
-                      <div className="pl-6 pr-2 py-1 space-y-1">
+                      <div className="pl-5 pr-2 py-1 space-y-1">
                         {/* Self */}
                         <div className="flex items-center gap-2 py-0.5 px-2 rounded hover:bg-[#35373c]/50 text-xs text-[#dbdee1]">
                           <div
@@ -233,7 +333,10 @@ export default function Sidebar({
                             {profile.emoji}
                           </div>
                           <span className="truncate font-medium">{profile.name} (Anda)</span>
-                          {isMuted && <MicOff className="w-3 h-3 text-red-400 ml-auto shrink-0" />}
+                          <span className="ml-auto flex items-center gap-1 shrink-0">
+                            {isDisplayableRole(selfRole) && <RoleBadge role={selfRole} />}
+                            {isMuted && <MicOff className="w-3 h-3 text-red-400" />}
+                          </span>
                         </div>
 
                         {/* Remote Peers */}
@@ -243,14 +346,21 @@ export default function Sidebar({
                             className="flex items-center gap-2 py-0.5 px-2 rounded hover:bg-[#35373c]/50 text-xs text-[#dbdee1]"
                           >
                             <div
-                              className={`w-5 h-5 rounded-full bg-gradient-to-tr ${p.profile?.bg || 'from-gray-600 to-gray-700'} flex items-center justify-center text-[11px] border ${
+                              className={`w-5 h-5 rounded-full bg-gradient-to-tr ${
+                                p.profile?.bg || 'from-gray-600 to-gray-700'
+                              } flex items-center justify-center text-[11px] border ${
                                 p.isSpeaking ? 'speaking-ring' : 'border-transparent'
                               }`}
                             >
                               {p.profile?.emoji || '🐱'}
                             </div>
                             <span className="truncate">{p.profile?.name || 'Oyen Guest'}</span>
-                            {p.isMuted && <MicOff className="w-3 h-3 text-red-400 ml-auto shrink-0" />}
+                            <span className="ml-auto flex items-center gap-1 shrink-0">
+                              {isDisplayableRole(p.profile?.role) && (
+                                <RoleBadge role={p.profile.role} />
+                              )}
+                              {p.isMuted && <MicOff className="w-3 h-3 text-red-400" />}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -262,12 +372,12 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Voice Connected Pill (Bottom Above Profile) */}
+        {/* Voice Connected Pill */}
         {activeVoiceChannel && (
           <div className="bg-[#232428] px-3 py-2 border-t border-[#1f2023] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Radio className="w-4 h-4 text-green-400 animate-pulse" />
-              <div>
+            <div className="flex items-center gap-2 min-w-0">
+              <Radio className="w-4 h-4 text-green-400 animate-pulse shrink-0" />
+              <div className="min-w-0">
                 <div className="text-xs font-semibold text-green-400 flex items-center gap-1">
                   Voice Connected
                 </div>
@@ -279,16 +389,15 @@ export default function Sidebar({
             <button
               onClick={leaveVoiceChannel}
               title="Putus Suara"
-              className="p-1.5 rounded-md hover:bg-red-500/20 text-[#b5bac1] hover:text-red-400 transition-colors"
+              className="p-1.5 rounded-md hover:bg-red-500/20 text-[#b5bac1] hover:text-red-400 transition-colors shrink-0"
             >
               <PhoneOff className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* User Footer (Discord Bottom Bar) */}
-        <div className="h-[52px] bg-[#232428] px-2 flex items-center justify-between border-t border-[#1f2023]">
-          {/* User Info */}
+        {/* User Footer */}
+        <div className="h-[56px] bg-[#232428] px-2 flex items-center justify-between border-t border-[#1f2023]">
           <div
             onClick={openSettings}
             className="flex items-center gap-2 p-1 rounded-md hover:bg-[#35373c] cursor-pointer flex-1 min-w-0 mr-1"
@@ -302,12 +411,20 @@ export default function Sidebar({
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-[#232428] rounded-full"></span>
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-semibold text-white truncate">{profile.name}</div>
-              <div className="text-[10px] text-[#949ba4] truncate">{profile.tag}</div>
+              <div className="text-xs font-semibold text-white truncate flex items-center gap-1">
+                {isOwnerProfile && <Crown className="w-3 h-3 text-amber-400 shrink-0" />}
+                <span className="truncate">{profile.name}</span>
+              </div>
+              <div className="mt-0.5">
+                {isDisplayableRole(selfRole) ? (
+                  <RoleBadge role={selfRole} />
+                ) : (
+                  <span className="text-[10px] text-[#949ba4] truncate">{profile.tag}</span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Quick Action Buttons */}
           <div className="flex items-center gap-0.5 shrink-0">
             <button
               onClick={toggleMute}
@@ -344,55 +461,63 @@ export default function Sidebar({
         </div>
       </aside>
 
-      {/* Add Custom Channel Modal */}
-      {showAddChannelModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      {/* Channel Create / Edit Modal */}
+      {channelModal && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          onClick={() => setChannelModal(null)}
+        >
           <form
-            onSubmit={handleCreateChannel}
-            className="bg-[#313338] w-full max-w-sm rounded-2xl border border-[#1f2023] p-5 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={submitChannel}
+            className="modal-pop bg-[#313338] w-full max-w-sm rounded-2xl border border-[#1f2023] p-5 shadow-2xl space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-sm text-white">Buat Channel Baru</h3>
+              <h3 className="font-bold text-sm text-white">
+                {channelModal.mode === 'create' ? 'Buat Channel Baru' : 'Edit Channel'}
+              </h3>
               <button
                 type="button"
-                onClick={() => setShowAddChannelModal(false)}
+                onClick={() => setChannelModal(null)}
                 className="text-[#949ba4] hover:text-white"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-[#b5bac1] uppercase mb-1">
-                Tipe Channel
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setNewChannelType('voice')}
-                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                    newChannelType === 'voice'
-                      ? 'border-orange-500 bg-orange-500/10 text-orange-400'
-                      : 'border-[#2b2d31] bg-[#1e1f22] text-[#949ba4]'
-                  }`}
-                >
-                  <Volume2 className="w-4 h-4" />
-                  Voice
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewChannelType('text')}
-                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                    newChannelType === 'text'
-                      ? 'border-orange-500 bg-orange-500/10 text-orange-400'
-                      : 'border-[#2b2d31] bg-[#1e1f22] text-[#949ba4]'
-                  }`}
-                >
-                  <Hash className="w-4 h-4" />
-                  Text
-                </button>
+            {channelModal.mode === 'create' && (
+              <div>
+                <label className="block text-xs font-semibold text-[#b5bac1] uppercase mb-1">
+                  Tipe Channel
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setChannelModal((p) => ({ ...p, type: 'voice' }))}
+                    className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                      channelModal.type === 'voice'
+                        ? 'border-orange-500 bg-orange-500/10 text-orange-400'
+                        : 'border-[#2b2d31] bg-[#1e1f22] text-[#949ba4]'
+                    }`}
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    Voice
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChannelModal((p) => ({ ...p, type: 'text' }))}
+                    className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                      channelModal.type === 'text'
+                        ? 'border-orange-500 bg-orange-500/10 text-orange-400'
+                        : 'border-[#2b2d31] bg-[#1e1f22] text-[#949ba4]'
+                    }`}
+                  >
+                    <Hash className="w-4 h-4" />
+                    Text
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-xs font-semibold text-[#b5bac1] uppercase mb-1">
@@ -400,10 +525,23 @@ export default function Sidebar({
               </label>
               <input
                 type="text"
-                value={newChannelName}
-                onChange={(e) => setNewChannelName(e.target.value)}
+                value={channelModal.name}
+                onChange={(e) => setChannelModal((p) => ({ ...p, name: e.target.value }))}
                 placeholder="Contoh: oyen-santai"
                 autoFocus
+                className="w-full bg-[#1e1f22] border border-[#2b2d31] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#b5bac1] uppercase mb-1">
+                {channelModal.type === 'voice' ? 'Deskripsi' : 'Topik'}
+              </label>
+              <input
+                type="text"
+                value={channelModal.description}
+                onChange={(e) => setChannelModal((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Opsional..."
                 className="w-full bg-[#1e1f22] border border-[#2b2d31] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500"
               />
             </div>
@@ -411,20 +549,69 @@ export default function Sidebar({
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setShowAddChannelModal(false)}
+                onClick={() => setChannelModal(null)}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#b5bac1] hover:text-white"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                disabled={!newChannelName.trim()}
+                disabled={!channelModal.name.trim()}
                 className="px-4 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-40 text-white text-xs font-semibold shadow-md"
               >
-                Buat Channel
+                {channelModal.mode === 'create' ? 'Buat Channel' : 'Simpan'}
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="modal-pop bg-[#313338] w-full max-w-sm rounded-2xl border border-[#1f2023] p-5 shadow-2xl space-y-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center shrink-0">
+                <Trash className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-white">Hapus Channel?</h3>
+                <p className="text-xs text-[#949ba4] mt-1">
+                  Channel{' '}
+                  <span className="text-[#dbdee1] font-semibold">
+                    {deleteTarget.type === 'text' ? '#' : '🔊'} {deleteTarget.name}
+                  </span>{' '}
+                  akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
+                </p>
+              </div>
+            </div>
+            {((deleteTarget.type === 'text' ? textChannels : voiceChannels) || []).length <= 1 && (
+              <div className="flex items-start gap-2 text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                Minimal harus tersisa 1 channel {deleteTarget.type === 'text' ? 'text' : 'voice'}.
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#b5bac1] hover:text-white"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>

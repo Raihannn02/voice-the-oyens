@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { playMeowSound, playPurrSound } from '../utils/soundEffects';
+import RoleBadge from './RoleBadge';
+import { isDisplayableRole } from '../utils/roles';
 
 export default function VoiceStage({
   activeVoiceChannel,
@@ -38,6 +40,7 @@ export default function VoiceStage({
   toggleCamera,
   triggerReaction,
   setPeerVolume,
+  selfRole,
 }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedScreenPeerId, setSelectedScreenPeerId] = useState(null); // 'self' or peerId
@@ -196,6 +199,7 @@ export default function VoiceStage({
                 name={`${profile.name} (Anda)`}
                 emoji={profile.emoji}
                 bg={profile.bg}
+                role={selfRole}
                 isSpeaking={isSpeaking}
                 isMuted={isMuted}
                 cameraStream={localCameraStream}
@@ -207,6 +211,7 @@ export default function VoiceStage({
                   name={peer.profile?.name || 'Kawan Oyen'}
                   emoji={peer.profile?.emoji || '🐱'}
                   bg={peer.profile?.bg || 'from-gray-600 to-gray-700'}
+                  role={peer.profile?.role}
                   isSpeaking={peer.isSpeaking}
                   isMuted={peer.isMuted}
                   cameraStream={peer.cameraStream}
@@ -235,6 +240,7 @@ export default function VoiceStage({
                 name={`${profile.name} (Anda)`}
                 emoji={profile.emoji}
                 bg={profile.bg}
+                role={selfRole}
                 isSpeaking={isSpeaking}
                 isMuted={isMuted}
                 isDeafened={isDeafened}
@@ -249,6 +255,7 @@ export default function VoiceStage({
                   name={peer.profile?.name || 'Kawan Oyen'}
                   emoji={peer.profile?.emoji || '🐱'}
                   bg={peer.profile?.bg || 'from-gray-600 to-gray-700'}
+                  role={peer.profile?.role}
                   isSpeaking={peer.isSpeaking}
                   isMuted={peer.isMuted}
                   isDeafened={peer.isDeafened}
@@ -397,6 +404,7 @@ function ParticipantMainCard({
   name,
   emoji,
   bg,
+  role,
   isSpeaking,
   isMuted,
   isDeafened,
@@ -426,6 +434,7 @@ function ParticipantMainCard({
       {/* Bottom Name Pill */}
       <div className="absolute bottom-3 left-3 bg-[#1e1f22]/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center gap-2 shadow-md">
         <span className="truncate max-w-[140px]">{name}</span>
+        {isDisplayableRole(role) && <RoleBadge role={role} />}
         {isMuted && <MicOff className="w-3.5 h-3.5 text-red-400 shrink-0" />}
         {isDeafened && <Headphones className="w-3.5 h-3.5 text-red-400 shrink-0" />}
       </div>
@@ -454,6 +463,7 @@ function ParticipantMiniCard({
   name,
   emoji,
   bg,
+  role,
   isSpeaking,
   isMuted,
   cameraStream,
@@ -475,9 +485,12 @@ function ParticipantMiniCard({
           {emoji}
         </div>
       )}
-      <div className="absolute bottom-1 left-1 right-1 bg-[#1e1f22]/80 px-1.5 py-0.5 rounded text-[10px] font-medium text-white flex items-center justify-between">
+      <div className="absolute bottom-1 left-1 right-1 bg-[#1e1f22]/80 px-1.5 py-0.5 rounded text-[10px] font-medium text-white flex items-center justify-between gap-1">
         <span className="truncate">{name}</span>
-        {isMuted && <MicOff className="w-2.5 h-2.5 text-red-400 shrink-0" />}
+        <span className="flex items-center gap-1 shrink-0">
+          {isDisplayableRole(role) && <RoleBadge role={role} />}
+          {isMuted && <MicOff className="w-2.5 h-2.5 text-red-400" />}
+        </span>
       </div>
     </div>
   );

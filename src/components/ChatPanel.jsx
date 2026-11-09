@@ -8,6 +8,8 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
+import RoleBadge from './RoleBadge';
+import { isDisplayableRole } from '../utils/roles';
 
 const COMMON_EMOJIS = ['🐱', '😹', '🔥', '👍', '❤️', '🎮', '✨', '😂', '💀', '🎉'];
 
@@ -114,10 +116,11 @@ export default function ChatPanel({
               {msg.avatar || '🐱'}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="font-semibold text-xs text-white hover:underline cursor-pointer">
                   {msg.sender}
                 </span>
+                {isDisplayableRole(msg.role) && <RoleBadge role={msg.role} />}
                 <span className="text-[10px] text-[#949ba4]">{msg.time}</span>
               </div>
               {msg.text && (

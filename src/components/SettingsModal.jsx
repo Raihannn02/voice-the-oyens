@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Mic, Volume2, Sparkles, Check } from 'lucide-react';
 import { OYEN_AVATARS, saveProfile } from '../utils/avatars';
+import RoleBadge from './RoleBadge';
 
 export default function SettingsModal({
   isOpen,
@@ -8,6 +9,7 @@ export default function SettingsModal({
   profile,
   onUpdateProfile,
   isSpeaking,
+  selfRole,
 }) {
   const [name, setName] = useState(profile.name);
   const [selectedAvatar, setSelectedAvatar] = useState(
@@ -44,7 +46,7 @@ export default function SettingsModal({
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-[#313338] w-full max-w-lg rounded-2xl border border-[#1f2023] shadow-2xl overflow-hidden flex flex-col">
+      <div className="modal-pop bg-[#313338] w-full max-w-lg rounded-2xl border border-[#1f2023] shadow-2xl overflow-hidden flex flex-col">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-[#1f2023] flex items-center justify-between bg-[#2b2d31]">
           <div className="flex items-center gap-2">
@@ -61,6 +63,17 @@ export default function SettingsModal({
 
         {/* Modal Body */}
         <div className="p-6 space-y-6 overflow-y-auto max-h-[75vh]">
+          {/* Section: Role */}
+          <div className="flex items-center justify-between bg-[#2b2d31] border border-[#1f2023] rounded-xl px-4 py-3">
+            <div>
+              <div className="text-xs font-bold text-[#b5bac1] uppercase tracking-wider">Role Kamu</div>
+              <p className="text-[11px] text-[#949ba4] mt-0.5">
+                Role diberikan oleh Owner server.
+              </p>
+            </div>
+            <RoleBadge role={selfRole} size="md" />
+          </div>
+
           {/* Section: Profile Name */}
           <div>
             <label className="block text-xs font-bold text-[#b5bac1] uppercase tracking-wider mb-2">
