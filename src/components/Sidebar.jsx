@@ -28,6 +28,9 @@ export const DEFAULT_VOICE_CHANNELS = [
   { id: 'stage-nonton', name: 'Stage Nonton Bareng', desc: 'Screen share & streaming' },
 ];
 
+export const TEXT_CHANNELS = DEFAULT_TEXT_CHANNELS;
+export const VOICE_CHANNELS = DEFAULT_VOICE_CHANNELS;
+
 export default function Sidebar({
   profile,
   activeTextChannel,
